@@ -21,10 +21,17 @@ namespace Application
             AuthClient authClient = new AuthClient("10.211.55.2", 5554);
             AuthClient.AuthResult authResult = authClient.authenticate("waymirec", "password");
             logger.Debug($"Status: {authResult.Status}");
-            if (authResult.Status == AuthClient.AuthStatus.Success)
+            if (authResult.Status != AuthClient.AuthStatus.Success)
             {
-                logger.Debug($"Server: {authResult.Ip}:{authResult.Port}");
+                logger.Debug("Failed to authenticate.");
+                System.Environment.Exit(1);
             }
+
+            logger.Debug($"Server: {authResult.Ip}:{authResult.Port}");
+            logger.Debug($"Token:{authResult.Token.Length} => {BitConverter.ToString(authResult.Token).Replace("-", string.Empty)}");
+            GameClient gameClient = new GameClient(authResult.Ip, authResult.Port);
+            gameClient.Connect("waymirec", authResult.Token);
+
             Console.ReadLine();
         }
     }

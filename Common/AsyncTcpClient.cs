@@ -3,7 +3,6 @@ using System;
 using System.IO;
 using System.Net.Sockets;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace Tyranny.Networking
 {
@@ -12,10 +11,10 @@ namespace Tyranny.Networking
         public String Host { get; private set; }
         public int Port { get; private set; }
 
-        public event EventHandler<NetworkAsyncEventArgs> OnConnected;
-        public event EventHandler<NetworkAsyncEventArgs> OnConnectFailed;
-        public event EventHandler<NetworkAsyncEventArgs> OnDisconnected;
-        public event EventHandler<NetworkAsyncEventArgs> OnDataReceived;
+        public event EventHandler<NetworkEventArgs> OnConnected;
+        public event EventHandler<NetworkEventArgs> OnConnectFailed;
+        public event EventHandler<NetworkEventArgs> OnDisconnected;
+        public event EventHandler<NetworkEventArgs> OnDataReceived;
 
         private Logger logger = NLog.LogManager.GetCurrentClassLogger();
         private System.Net.Sockets.TcpClient client;
@@ -26,7 +25,7 @@ namespace Tyranny.Networking
         public AsyncTcpClient()
         {
             client = new System.Net.Sockets.TcpClient();
-            client.ReceiveTimeout = 1000;
+            client.ReceiveTimeout = 15000;
 
         }
 
@@ -38,7 +37,7 @@ namespace Tyranny.Networking
             logger.Debug($"Connecting to {Host}:{Port}");
             await client.ConnectAsync(host, port);
 
-            NetworkAsyncEventArgs args = new NetworkAsyncEventArgs();
+            NetworkEventArgs args = new NetworkEventArgs();
             args.Client = this;
 
             if(client.Connected)
@@ -53,10 +52,7 @@ namespace Tyranny.Networking
                 OnConnectFailed?.Invoke(this, args);
             }
 
-            while(client.Connected)
-            {
-                Read();
-            }
+            Read();
         }
 
         public void Send(PacketWriter packet)
@@ -72,7 +68,7 @@ namespace Tyranny.Networking
                 {
                     logger.Error($"Error writing to socket to {Host}:{Port}");
                     client.Close();
-                    OnDisconnected?.Invoke(this, new NetworkAsyncEventArgs(this));
+                    OnDisconnected?.Invoke(this, new NetworkEventArgs(this));
                 }
             }
         }
@@ -97,46 +93,42 @@ namespace Tyranny.Networking
                     if (BitConverter.IsLittleEndian) Array.Reverse(header);
                     int len = BitConverter.ToInt32(header);
 
-                    if (bufferPos < len)
+                    if (bufferPos >= len)
                     {
-                        Read();
+                        byte[] data = new byte[len];
+                        Array.Copy(buffer, 4, data, 0, len);
+
+                        NetworkEventArgs args = new NetworkEventArgs();
+                        args.Client = this;
+                        args.Packet = new PacketReader(data);
+                        OnDataReceived?.Invoke(this, args);
+
+                        int extra = bufferPos - (len + 4);
+                        Array.Copy(buffer, len + 4, buffer, 0, extra);
+                        bufferPos = extra;
                     }
-
-                    byte[] data = new byte[len];
-                    Array.Copy(buffer, 4, data, 0, len);
-
-                    NetworkAsyncEventArgs args = new NetworkAsyncEventArgs();
-                    args.Client = this;
-                    args.Packet = new PacketReader(data);
-                    OnDataReceived?.Invoke(this, args);
-
-                    int extra = bufferPos - (len + 4);
-                    Array.Copy(buffer, len + 4, buffer, 0, extra);
-                    bufferPos = extra;
                 }
-                catch(IOException)
+                catch(IOException ex)
                 {
-                    logger.Error($"Error reading from socket to {Host}:{Port}");
-                    client.Close();
-                    OnDisconnected?.Invoke(this, new NetworkAsyncEventArgs(this));
+                    Thread.Sleep(125);
                 }
             }
 
-            OnDisconnected?.Invoke(this, new NetworkAsyncEventArgs(this));
+            OnDisconnected?.Invoke(this, new NetworkEventArgs(this));
         }
     }
 
-    public class NetworkAsyncEventArgs : EventArgs
+    public class NetworkEventArgs : EventArgs
     {
         public AsyncTcpClient Client { get; set; }
         public PacketReader Packet { get; set; }
 
-        public NetworkAsyncEventArgs()
+        public NetworkEventArgs()
         {
 
         }
 
-        public NetworkAsyncEventArgs(AsyncTcpClient client)
+        public NetworkEventArgs(AsyncTcpClient client)
         {
             Client = client;
         }

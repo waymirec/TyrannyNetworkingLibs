@@ -114,13 +114,20 @@ namespace Tyranny.Networking
             if (tcpClient.Read(out PacketReader authCompletePacket))
             {
                 int status = authCompletePacket.ReadInt32();
-                long ipValue = BitConverter.ToUInt32(authCompletePacket.ReadBytes(4));
-                int port = authCompletePacket.ReadInt32();
-                short authTokenLen = authCompletePacket.ReadInt16();
-                byte[] authToken = authCompletePacket.ReadBytes(authTokenLen);
-                String ip = new IPAddress(ipValue).ToString();
-                logger.Debug($"AUTH: Status={status}, IP={ip}, Port={port}, Token={BitConverter.ToString(authToken).Replace("-", string.Empty)}");
-                return new AuthResult((AuthStatus)status, ip, port, authToken);
+                if (status == 0)
+                {
+                    long ipValue = BitConverter.ToUInt32(authCompletePacket.ReadBytes(4));
+                    int port = authCompletePacket.ReadInt32();
+                    short authTokenLen = authCompletePacket.ReadInt16();
+                    byte[] authToken = authCompletePacket.ReadBytes(authTokenLen);
+                    String ip = new IPAddress(ipValue).ToString();
+                    logger.Debug($"Auth successful: Status={status}, IP={ip}, Port={port}, Token={BitConverter.ToString(authToken).Replace("-", string.Empty)}");
+                    return new AuthResult((AuthStatus)status, ip, port, authToken);
+                } else
+                {
+                    logger.Debug($"Auth failed with status {(AuthStatus)status}");
+                    return new AuthResult((AuthStatus)status);
+                }
             }
             else
             {
@@ -152,7 +159,8 @@ namespace Tyranny.Networking
         public enum AuthStatus
         {
             Success=0,
-            InvalidCredentials=1
+            InvalidCredentials=1,
+            NoServersAvailable=999
         }
     }
 }

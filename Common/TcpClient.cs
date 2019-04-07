@@ -93,32 +93,12 @@ namespace Tyranny.Networking
             byte[] data = new byte[len];
             Array.Copy(buffer, 4, data, 0, len);
 
-            NetworkEventArgs args = new NetworkEventArgs();
-            args.Client = this;
-            args.Packet = new PacketReader(data);
-
             int extra = bufferPos - (len + 4);
             Array.Copy(buffer, len + 4, buffer, 0, extra);
             bufferPos = extra;
 
             packet = new PacketReader(data);
             return true;
-        }
-    }
-
-    public class NetworkEventArgs : EventArgs
-    {
-        public TcpClient Client { get; set; }
-        public PacketReader Packet { get; set; }
-
-        public NetworkEventArgs()
-        {
-
-        }
-
-        public NetworkEventArgs(TcpClient client)
-        {
-            Client = client;
         }
     }
 }

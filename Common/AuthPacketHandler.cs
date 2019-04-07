@@ -4,7 +4,7 @@ using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace Tyranny.Networking.PacketHandler
+namespace Tyranny.Networking
 {
     public class AuthPacketHandler : IPacketHandler
     {
