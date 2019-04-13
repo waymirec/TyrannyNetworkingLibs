@@ -54,7 +54,7 @@ namespace Tyranny.Networking
         public static void ReceiveAuthComplete(PacketReader packet, AsyncTcpClient client)
         {
             int status = packet.ReadInt32();
-            long ipValue = BitConverter.ToUInt32(packet.ReadBytes(4));
+            long ipValue = BitConverter.ToUInt32(packet.ReadBytes(4), 0);
             int port = packet.ReadInt32();
             short authTokenLen = packet.ReadInt16();
             byte[] authToken = packet.ReadBytes(authTokenLen);

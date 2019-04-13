@@ -83,7 +83,7 @@ namespace Tyranny.Networking
             byte[] header = new byte[4];
             Array.Copy(buffer, 0, header, 0, 4);
             if (BitConverter.IsLittleEndian) Array.Reverse(header);
-            int len = BitConverter.ToInt32(header);
+            int len = BitConverter.ToInt32(header, 0);
 
             if (bufferPos < len)
             {
