@@ -101,18 +101,10 @@ namespace Tyranny.Networking
             while (TcpClient.Connected)
             {
                 NetworkStream stream = TcpClient.GetStream();
-                /*
-                if (!stream.CanRead)// || !stream.DataAvailable)
-                {
-                    Thread.Sleep(250);
-                    continue;
-                }
-                */
                 try
                 {
                     int read = await TcpClient.GetStream().ReadAsync(buffer, bufferPos, buffer.Length - bufferPos);
-                    //int read = client.GetStream().Read(buffer, bufferPos, buffer.Length - bufferPos);
-                    if (read == 0)
+                    if (read <= 0)
                     {
                         Thread.Sleep(250);
                         continue;
@@ -124,7 +116,7 @@ namespace Tyranny.Networking
                     if (BitConverter.IsLittleEndian) Array.Reverse(header);
                     int len = BitConverter.ToInt32(header, 0);
 
-                    if (bufferPos >= len)
+                    if (len > 0 && bufferPos >= len)
                     {
                         byte[] data = new byte[len];
                         Array.Copy(buffer, 4, data, 0, len);
