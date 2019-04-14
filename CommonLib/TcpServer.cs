@@ -17,7 +17,7 @@ namespace Tyranny.Networking
 
         public bool Running { get; private set; }
 
-        protected Dictionary<string, AsyncTcpClient> clients = new Dictionary<string, AsyncTcpClient>();
+        protected Dictionary<Guid, AsyncTcpClient> clients = new Dictionary<Guid, AsyncTcpClient>();
 
         private Logger logger = LogManager.GetCurrentClassLogger();
         private TcpListener listener;

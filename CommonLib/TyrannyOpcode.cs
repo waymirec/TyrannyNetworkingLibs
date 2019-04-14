@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
+﻿
 namespace Tyranny.Networking
 {
     public enum TyrannyOpcode
@@ -17,6 +14,8 @@ namespace Tyranny.Networking
         Ping=21,
         Pong=22,
 
-        Move=100
+        EnterWorld=100,
+        Spawn=101,
+        Move=102
     }
 }

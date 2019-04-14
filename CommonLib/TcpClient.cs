@@ -7,8 +7,8 @@ namespace Tyranny.Networking
 {
     public class TcpClient
     {
-        private readonly string id = Guid.NewGuid().ToString().Replace("-", "");
-        public string Id => id;
+        private readonly Guid id = Guid.NewGuid();
+        public Guid Id => id;
         public string Host { get; private set; }
         public int Port { get; private set; }
         public bool Connected { get { return client.Connected; } }
