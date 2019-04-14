@@ -14,9 +14,9 @@ namespace Tyranny.Networking
         public string Host { get; private set; }
         public int Port { get; private set; }
 
-        public event EventHandler<PacketEventArgs> OnConnected;
-        public event EventHandler<PacketEventArgs> OnConnectFailed;
-        public event EventHandler<PacketEventArgs> OnDisconnected;
+        public event EventHandler<SocketEventArgs> OnConnected;
+        public event EventHandler<SocketEventArgs> OnConnectFailed;
+        public event EventHandler<SocketEventArgs> OnDisconnected;
         public event EventHandler<PacketEventArgs> OnDataReceived;
 
         public bool Connected => TcpClient.Connected;
@@ -55,7 +55,7 @@ namespace Tyranny.Networking
             logger.Debug($"Connecting to {Host}:{Port}");
             await TcpClient.ConnectAsync(host, port);
 
-            PacketEventArgs args = new PacketEventArgs();
+            SocketEventArgs args = new SocketEventArgs();
             args.TcpClient = this;
 
             if(TcpClient.Connected)
@@ -91,7 +91,7 @@ namespace Tyranny.Networking
                 {
                     logger.Error($"Error writing to socket to {Host}:{Port}");
                     TcpClient.Close();
-                    OnDisconnected?.Invoke(this, new PacketEventArgs(this));
+                    OnDisconnected?.Invoke(this, new SocketEventArgs(this));
                 }
             }
         }
@@ -130,8 +130,14 @@ namespace Tyranny.Networking
                         PacketEventArgs args = new PacketEventArgs();
                         args.TcpClient = this;
                         args.Packet = new PacketReader(data);
-                        if(args.Packet.Opcode != TyrannyOpcode.NoOp)
+                        if (args.Packet.Opcode != TyrannyOpcode.NoOp)
+                        {
+                            logger.Debug($"AsyncTcpClient received data: {args.Packet.Opcode}");
+                            if (OnDataReceived == null)
+                                logger.Warn($"No handler found for opcode: {args.Packet.Opcode}");
+
                             OnDataReceived?.Invoke(this, args);
+                        }
 
                         int extra = bufferPos - (len + 4);
                         Array.Copy(buffer, len + 4, buffer, 0, extra);
@@ -145,7 +151,7 @@ namespace Tyranny.Networking
                 }
             }
             logger.Debug($"Client {Id} disconnected");
-            OnDisconnected?.Invoke(this, new PacketEventArgs(this));
+            OnDisconnected?.Invoke(this, new SocketEventArgs(this));
         }
 
         private void Initialize()

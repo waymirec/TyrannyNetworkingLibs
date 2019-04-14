@@ -44,6 +44,11 @@ namespace Tyranny.GameClient
             packetHandlers = PacketHandler.Load(typeof(GameClient));
         }
 
+        ~GameClient()
+        {
+            logger.Info("GameClient destroyed.");
+        }
+
         public void Connect(String username, byte[] authToken)
         {
             Username = username;
@@ -63,7 +68,7 @@ namespace Tyranny.GameClient
             tcpClient.Send(packetOut);
         }
 
-        public void OnConnected(object source, PacketEventArgs args)
+        public void OnConnected(object source, SocketEventArgs args)
         {
             PacketWriter ident = new PacketWriter(TyrannyOpcode.GameIdent);
             ident.Write(Username);
@@ -74,12 +79,12 @@ namespace Tyranny.GameClient
             handler.OnLoggedIn();
         }
 
-        public void OnConnectFailed(object source, PacketEventArgs args)
+        public void OnConnectFailed(object source, SocketEventArgs args)
         {
             logger.Error($"Failed to connect to {Host}:{Port}");
         }
 
-        public void OnDisconnected(object source, PacketEventArgs args)
+        public void OnDisconnected(object source, SocketEventArgs args)
         {
             logger.Info($"Disconnected from {Host}:{Port}");
         }
