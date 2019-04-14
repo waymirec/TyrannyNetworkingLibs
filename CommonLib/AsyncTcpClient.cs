@@ -169,6 +169,7 @@ namespace Tyranny.Networking
                 try
                 {
                     PacketWriter noop = new PacketWriter(TyrannyOpcode.NoOp);
+                    noop.Write((byte)0);
                     Send(noop);
                     //TcpClient.GetStream().Write(new byte[] { 0 }, 0, 1);
                 }
