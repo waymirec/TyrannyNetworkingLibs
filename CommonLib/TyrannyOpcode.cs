@@ -3,6 +3,7 @@ namespace Tyranny.Networking
 {
     public enum TyrannyOpcode
     {
+        NoOp=0,
         AuthIdent=1,
         AuthChallenge=2,
         AuthProof=3,

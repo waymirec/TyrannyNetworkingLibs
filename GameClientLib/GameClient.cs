@@ -86,6 +86,7 @@ namespace Tyranny.GameClient
 
         public void OnDataReceived(object source, PacketEventArgs args)
         {
+            logger.Debug("Packet Received!");
             TyrannyOpcode opcode = args.Packet.Opcode;
             Handler handler;
             if (packetHandlers.TryGetValue(opcode, out handler))
@@ -123,7 +124,7 @@ namespace Tyranny.GameClient
             logger.Debug($"Pong({count}");
         }
 
-        [PacketHandler(TyrannyOpcode.Move)]
+        [PacketHandler(TyrannyOpcode.EnterWorld)]
         public static void HandleMove(PacketReader packetIn, AsyncTcpClient client)
         {
             Guid guid = new Guid(packetIn.ReadBytes(16));
@@ -131,6 +132,7 @@ namespace Tyranny.GameClient
             float y = packetIn.ReadSingle();
             float z = packetIn.ReadSingle();
 
+            logger.Debug($"Enter World: {x.ToString("F2")}, {y.ToString("F2")}, {z.ToString("F2")}");
             MovementEventArgs args = new MovementEventArgs();
             args.Guid = guid;
             args.Position = new MovementEventArgs.Vector3() { X = x, Y = y, Z = z };

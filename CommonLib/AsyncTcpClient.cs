@@ -111,6 +111,12 @@ namespace Tyranny.Networking
                     }
                     bufferPos += read;
 
+                    if(bufferPos < 3)
+                    {
+                        Thread.Sleep(250);
+                        continue;
+                    }
+
                     byte[] header = new byte[4];
                     Array.Copy(buffer, 0, header, 0, 4);
                     if (BitConverter.IsLittleEndian) Array.Reverse(header);
@@ -124,7 +130,8 @@ namespace Tyranny.Networking
                         PacketEventArgs args = new PacketEventArgs();
                         args.TcpClient = this;
                         args.Packet = new PacketReader(data);
-                        OnDataReceived?.Invoke(this, args);
+                        if(args.Packet.Opcode != TyrannyOpcode.NoOp)
+                            OnDataReceived?.Invoke(this, args);
 
                         int extra = bufferPos - (len + 4);
                         Array.Copy(buffer, len + 4, buffer, 0, extra);
@@ -161,7 +168,9 @@ namespace Tyranny.Networking
                 logger.Debug("Sending heartbeat...");
                 try
                 {
-                    TcpClient.GetStream().Write(new byte[] { 0 }, 0, 1);
+                    PacketWriter noop = new PacketWriter(TyrannyOpcode.NoOp);
+                    Send(noop);
+                    //TcpClient.GetStream().Write(new byte[] { 0 }, 0, 1);
                 }
                 catch (Exception exception)
                 {
