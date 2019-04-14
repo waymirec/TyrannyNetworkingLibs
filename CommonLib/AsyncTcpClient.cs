@@ -3,42 +3,48 @@ using System;
 using System.IO;
 using System.Net.Sockets;
 using System.Threading;
+using System.Timers;
 
 namespace Tyranny.Networking
 {
     public class AsyncTcpClient
     {
-        public string Id => Guid.NewGuid().ToString().Replace("-", "");
+        private readonly string id = Guid.NewGuid().ToString().Replace("-", "");
+        public string Id => id;
         public string Host { get; private set; }
         public int Port { get; private set; }
 
-        public event EventHandler<NetworkEventArgs> OnConnected;
-        public event EventHandler<NetworkEventArgs> OnConnectFailed;
-        public event EventHandler<NetworkEventArgs> OnDisconnected;
-        public event EventHandler<NetworkEventArgs> OnDataReceived;
+        public event EventHandler<PacketEventArgs> OnConnected;
+        public event EventHandler<PacketEventArgs> OnConnectFailed;
+        public event EventHandler<PacketEventArgs> OnDisconnected;
+        public event EventHandler<PacketEventArgs> OnDataReceived;
 
-        public bool Connected {
-            get
-            {
-                return client.Connected;
-            }
-        }
+        public bool Connected => TcpClient.Connected;
+        public System.Net.Sockets.TcpClient TcpClient { get; private set; }
 
         private Logger logger = NLog.LogManager.GetCurrentClassLogger();
-        private System.Net.Sockets.TcpClient client;
 
         private byte[] buffer = new byte[8096];
         private int bufferPos = 0;
 
+        private System.Timers.Timer heartbeatTimer;
+
         public AsyncTcpClient()
         {
-            client = new System.Net.Sockets.TcpClient();
+            TcpClient = new System.Net.Sockets.TcpClient();
+            Initialize();
+        }
+
+        public AsyncTcpClient(System.Net.Sockets.TcpClient tcpClient)
+        {
+            TcpClient = tcpClient;
+            Initialize();
 
         }
 
-        public AsyncTcpClient(System.Net.Sockets.TcpClient client)
+        ~AsyncTcpClient()
         {
-            this.client = client;
+            StopHeartbeat();
         }
 
         public async void Connect(String host, int port)
@@ -47,15 +53,15 @@ namespace Tyranny.Networking
             Port = port;
 
             logger.Debug($"Connecting to {Host}:{Port}");
-            await client.ConnectAsync(host, port);
+            await TcpClient.ConnectAsync(host, port);
 
-            NetworkEventArgs args = new NetworkEventArgs();
-            args.Client = this;
+            PacketEventArgs args = new PacketEventArgs();
+            args.TcpClient = this;
 
-            if(client.Connected)
+            if(TcpClient.Connected)
             {
                 logger.Debug($"Connected to {Host}:{Port}");
-                ((NetworkStream)client.GetStream()).ReadTimeout = 1000;
+                ((NetworkStream)TcpClient.GetStream()).ReadTimeout = 1000;
                 OnConnected?.Invoke(this, args);
             }
             else
@@ -69,47 +75,48 @@ namespace Tyranny.Networking
 
         public void Close()
         {
-            client.Close();
+            TcpClient.Close();
         }
 
         public async void Send(PacketWriter packet)
         {
-            if (client.Connected)
+            if (TcpClient.Connected)
             {
                 try
                 {
                     byte[] data = packet.ToBytes();
-                    await client.GetStream().WriteAsync(data, 0, data.Length);
+                    await TcpClient.GetStream().WriteAsync(data, 0, data.Length);
                 } 
                 catch(IOException)
                 {
                     logger.Error($"Error writing to socket to {Host}:{Port}");
-                    client.Close();
-                    OnDisconnected?.Invoke(this, new NetworkEventArgs(this));
+                    TcpClient.Close();
+                    OnDisconnected?.Invoke(this, new PacketEventArgs(this));
                 }
             }
         }
 
         public async void ReadAsync()
         {
-            while (client.Connected)
+            while (TcpClient.Connected)
             {
-                NetworkStream stream = client.GetStream();
+                NetworkStream stream = TcpClient.GetStream();
+                /*
                 if (!stream.CanRead)// || !stream.DataAvailable)
                 {
                     Thread.Sleep(250);
                     continue;
                 }
+                */
                 try
                 {
-                    int read = await client.GetStream().ReadAsync(buffer, bufferPos, buffer.Length - bufferPos);
+                    int read = await TcpClient.GetStream().ReadAsync(buffer, bufferPos, buffer.Length - bufferPos);
                     //int read = client.GetStream().Read(buffer, bufferPos, buffer.Length - bufferPos);
                     if (read == 0)
                     {
                         Thread.Sleep(250);
                         continue;
                     }
-
                     bufferPos += read;
 
                     byte[] header = new byte[4];
@@ -122,8 +129,8 @@ namespace Tyranny.Networking
                         byte[] data = new byte[len];
                         Array.Copy(buffer, 4, data, 0, len);
 
-                        NetworkEventArgs args = new NetworkEventArgs();
-                        args.Client = this;
+                        PacketEventArgs args = new PacketEventArgs();
+                        args.TcpClient = this;
                         args.Packet = new PacketReader(data);
                         OnDataReceived?.Invoke(this, args);
 
@@ -132,34 +139,74 @@ namespace Tyranny.Networking
                         bufferPos = extra;
                     }
                 }
-                catch(IOException ex)
+                catch(IOException)
                 {
-                    if (!client.Connected)
-                    {
-                        logger.Warn($"Socket Exception: {ex.ToString()}");
-                        break;
-                    }
-                    Thread.Sleep(125);
+                    if (TcpClient.Connected)
+                        Thread.Sleep(125);
                 }
             }
-            logger.Info("Stopping read, client disconnected.");
-            OnDisconnected?.Invoke(this, new NetworkEventArgs(this));
+            logger.Debug($"Client {Id} disconnected");
+            OnDisconnected?.Invoke(this, new PacketEventArgs(this));
+        }
+
+        private void Initialize()
+        {
+            heartbeatTimer = new System.Timers.Timer(5000);
+            heartbeatTimer.Elapsed += OnHeartbeatTimer;
+            heartbeatTimer.Enabled = true;
+        }
+
+        private void StopHeartbeat()
+        {
+            heartbeatTimer.Elapsed -= OnHeartbeatTimer;
+            heartbeatTimer.Enabled = false;
+        }
+
+        private void OnHeartbeatTimer(object source, ElapsedEventArgs e)
+        {
+            if (TcpClient.Connected)
+            {
+                logger.Debug("Sending heartbeat...");
+                try
+                {
+                    TcpClient.GetStream().Write(new byte[] { 0 }, 0, 1);
+                }
+                catch (Exception exception)
+                {
+                    logger.Debug(exception, "Exception sending heartbeat");
+                }
+            }
         }
     }
 
-    public class NetworkEventArgs : EventArgs
+    public class PacketEventArgs : EventArgs
     {
-        public AsyncTcpClient Client { get; set; }
+        public AsyncTcpClient TcpClient { get; set; }
         public PacketReader Packet { get; set; }
 
-        public NetworkEventArgs()
+        public PacketEventArgs()
         {
 
         }
 
-        public NetworkEventArgs(AsyncTcpClient client)
+        public PacketEventArgs(AsyncTcpClient tcpClient)
         {
-            Client = client;
+            TcpClient = tcpClient;
+        }
+    }
+
+    public class SocketEventArgs : EventArgs
+    {
+        public AsyncTcpClient TcpClient { get; set; }
+
+        public SocketEventArgs()
+        {
+
+        }
+
+        public SocketEventArgs(AsyncTcpClient tcpClient)
+        {
+            TcpClient = tcpClient;
         }
     }
 }

@@ -68,6 +68,10 @@
       <Project>{81ab1e83-7651-4d9c-8030-fbdb1e1e952b}</Project>
       <Name>GameClientLib</Name>
     </ProjectReference>
+    <ProjectReference Include="..\WorldServer\WorldServer.csproj">
+      <Project>{fd3523d7-fe7a-49f8-9a0f-7bb866fdfabc}</Project>
+      <Name>WorldServer</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

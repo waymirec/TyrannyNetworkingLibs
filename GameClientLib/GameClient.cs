@@ -1,7 +1,6 @@
 ﻿using NLog;
 using System;
 using System.Collections.Generic;
-using System.Text;
 using Tyranny.Networking;
 using Tyranny.Networking.Events;
 
@@ -64,7 +63,7 @@ namespace Tyranny.GameClient
             tcpClient.Send(packetOut);
         }
 
-        public void OnConnected(object source, NetworkEventArgs args)
+        public void OnConnected(object source, PacketEventArgs args)
         {
             PacketWriter ident = new PacketWriter(TyrannyOpcode.GameIdent);
             ident.Write(Username);
@@ -75,17 +74,17 @@ namespace Tyranny.GameClient
             handler.OnLoggedIn();
         }
 
-        public void OnConnectFailed(object source, NetworkEventArgs args)
+        public void OnConnectFailed(object source, PacketEventArgs args)
         {
             logger.Error($"Failed to connect to {Host}:{Port}");
         }
 
-        public void OnDisconnected(object source, NetworkEventArgs args)
+        public void OnDisconnected(object source, PacketEventArgs args)
         {
             logger.Info($"Disconnected from {Host}:{Port}");
         }
 
-        public void OnDataReceived(object source, NetworkEventArgs args)
+        public void OnDataReceived(object source, PacketEventArgs args)
         {
             TyrannyOpcode opcode = args.Packet.Opcode;
             Handler handler;
@@ -93,7 +92,7 @@ namespace Tyranny.GameClient
             {
                 try
                 {
-                    handler(args.Packet, args.Client);
+                    handler(args.Packet, args.TcpClient);
                 }
                 catch (Exception ex)
                 {
