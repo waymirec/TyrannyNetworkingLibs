@@ -15,6 +15,8 @@ namespace Tyranny.Networking
         Ping=21,
         Pong=22,
 
+        Hello=50,
+
         EnterWorld=100,
         Spawn=101,
         Move=102
