@@ -9,8 +9,7 @@ namespace Tyranny.Networking
 {
     public class AsyncTcpClient
     {
-        private readonly Guid id = Guid.NewGuid();
-        public Guid Id => id;
+        public Guid Id { get; set; }
         public string Host { get; private set; }
         public int Port { get; private set; }
 
@@ -31,12 +30,14 @@ namespace Tyranny.Networking
 
         public AsyncTcpClient()
         {
+            Id = Guid.NewGuid();
             TcpClient = new System.Net.Sockets.TcpClient();
             Initialize();
         }
 
         public AsyncTcpClient(System.Net.Sockets.TcpClient tcpClient)
         {
+            Id = Guid.NewGuid();
             TcpClient = tcpClient;
             Initialize();
 
@@ -132,7 +133,6 @@ namespace Tyranny.Networking
                         args.Packet = new PacketReader(data);
                         if (args.Packet.Opcode != TyrannyOpcode.NoOp)
                         {
-                            logger.Debug($"AsyncTcpClient received data: {args.Packet.Opcode}");
                             if (OnDataReceived == null)
                                 logger.Warn($"No handler found for opcode: {args.Packet.Opcode}");
 
@@ -171,7 +171,6 @@ namespace Tyranny.Networking
         {
             if (TcpClient.Connected)
             {
-                logger.Debug("Sending heartbeat...");
                 try
                 {
                     PacketWriter noop = new PacketWriter(TyrannyOpcode.NoOp);
