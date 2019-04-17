@@ -8,20 +8,16 @@ namespace Tyranny.GameClient
 {
     public class GameClient : IPacketHandler
     {
-        public Guid Id { get => tcpClient.Id;  }
+        public delegate void Handler(PacketReader packetIn, AsyncTcpClient tcpClient);
+
+        public Guid Id { get => tcpClient.Id;  }  
         public String Host { get; private set; }
         public int Port { get; private set; }
         public String Username { get; private set; }
         public byte[] AuthToken { get; private set; }
 
-        public bool Connected
-        {
-            get
-            {
-                return tcpClient.Connected;
-            }
-        }
-
+        public bool Connected => tcpClient?.Connected ?? false;
+ 
         private static Logger logger = LogManager.GetCurrentClassLogger();
 
         private AsyncTcpClient tcpClient;
@@ -42,7 +38,7 @@ namespace Tyranny.GameClient
             tcpClient.OnDisconnected += OnDisconnected;
             tcpClient.OnDataReceived += OnDataReceived;
 
-            packetHandlers = PacketHandler.Load(this);
+            packetHandlers = PacketHandler.Load<Handler>(this);
         }
 
         ~GameClient()

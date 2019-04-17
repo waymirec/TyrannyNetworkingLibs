@@ -7,8 +7,6 @@ using System.Text;
 
 namespace Tyranny.Networking
 {
-    public delegate void Handler(PacketReader packetIn, AsyncTcpClient tcpClient);
-
     [System.AttributeUsage(System.AttributeTargets.Class | System.AttributeTargets.Method)]
     public class PacketHandler : System.Attribute
     {
@@ -26,27 +24,27 @@ namespace Tyranny.Networking
             return opcode;
         }
 
-        public static Dictionary<TyrannyOpcode, Handler> Load(Type clazz)
+        public static Dictionary<TyrannyOpcode, Handler> Load<Handler>(Type clazz) where Handler : Delegate
         {
-            return DoLoad(new Type[] { clazz });
+            return DoLoad<Handler>(new Type[] { clazz });
         }
 
-        public static Dictionary<TyrannyOpcode, Handler> Load(object obj)
+        public static Dictionary<TyrannyOpcode, Handler> Load<Handler>(object obj) where Handler : Delegate
         {
-            return DoLoad(obj);
+            return DoLoad<Handler>(obj);
         }
 
-        public static Dictionary<TyrannyOpcode, Handler> Load()
+        public static Dictionary<TyrannyOpcode, Handler> Load<Handler>() where Handler : Delegate
         {
             var type = typeof(IPacketHandler);
             var types = AppDomain.CurrentDomain.GetAssemblies()
                 .SelectMany(s => s.GetTypes())
                 .Where(p => type.IsAssignableFrom(p));
 
-            return DoLoad(types);
+            return DoLoad<Handler>(types);
         }
 
-        private static Dictionary<TyrannyOpcode, Handler> DoLoad(IEnumerable<Type> types)
+        private static Dictionary<TyrannyOpcode, Handler> DoLoad<Handler>(IEnumerable<Type> types) where Handler : Delegate
         {
             var attrType = typeof(PacketHandler);
             Dictionary<TyrannyOpcode, Handler> dict = new Dictionary<TyrannyOpcode, Handler>();
@@ -66,7 +64,8 @@ namespace Tyranny.Networking
                             logger.Debug($"Binding packet handler for opcode {opcode}: {t.FullName}:{method.Name}");
                             if (dict.ContainsKey(opcode))
                             {
-                                dict[opcode] += func;
+                                Delegate existing = dict[opcode] as Delegate;
+                                dict[opcode] = (Handler)Delegate.Combine(existing, func);
                             }
                             else
                             {
@@ -83,7 +82,7 @@ namespace Tyranny.Networking
             return dict;
         }
 
-        private static Dictionary<TyrannyOpcode, Handler> DoLoad(object obj)
+        private static Dictionary<TyrannyOpcode, Handler> DoLoad<Handler>(object obj) where Handler : Delegate
         {
             var attrType = typeof(PacketHandler);
             Dictionary<TyrannyOpcode, Handler> dict = new Dictionary<TyrannyOpcode, Handler>();
@@ -102,7 +101,8 @@ namespace Tyranny.Networking
                         logger.Debug($"Binding packet handler for opcode {opcode}: {t.FullName}:{method.Name}");
                         if (dict.ContainsKey(opcode))
                         {
-                            dict[opcode] += func;
+                            Delegate existing = dict[opcode] as Delegate;
+                            dict[opcode] = (Handler)Delegate.Combine(existing, func);
                         }
                         else
                         {
