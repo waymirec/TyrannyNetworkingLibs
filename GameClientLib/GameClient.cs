@@ -41,9 +41,9 @@ namespace Tyranny.GameClient
             packetHandlers = PacketHandler.Load<Handler>(this);
         }
 
-        ~GameClient()
+        void OnDestroy()
         {
-            logger.Info("GameClient destroyed.");
+            Close();
         }
 
         public void Connect(String username, byte[] authToken)

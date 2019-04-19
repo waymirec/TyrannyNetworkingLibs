@@ -19,6 +19,7 @@ namespace Tyranny.Networking
 
         EnterWorld=100,
         Spawn=101,
-        Move=102
+        Despawn=102,
+        Move=103
     }
 }
