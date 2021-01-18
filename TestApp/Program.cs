@@ -1,5 +1,7 @@
 ﻿using NLog;
 using System;
+using System.Security.Cryptography;
+using System.Text;
 using Tyranny.Networking;
 
 namespace Application
@@ -10,8 +12,8 @@ namespace Application
 
         TcpServer worldServer;
 
-        static void Main(string[] args)
-        { 
+        static void Main1(string[] args)
+        {
             var config = new NLog.Config.LoggingConfiguration();
             var logConsole = new NLog.Targets.ConsoleTarget("Console");
             config.AddRule(LogLevel.Debug, LogLevel.Fatal, logConsole);
@@ -28,7 +30,7 @@ namespace Application
 
         public void Start()
         {
-            worldServer = new TcpServer("192.168.0.127", 13579);
+            worldServer = new TcpServer("192.168.255.128", 13579);
             worldServer.OnClientConnected += OnClientConnected;
             worldServer.Start();
         }

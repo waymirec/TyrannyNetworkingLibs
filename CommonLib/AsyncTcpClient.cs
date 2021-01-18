@@ -21,11 +21,10 @@ namespace Tyranny.Networking
         public bool Connected => TcpClient.Connected;
         public System.Net.Sockets.TcpClient TcpClient { get; private set; }
 
-        private Logger logger = NLog.LogManager.GetCurrentClassLogger();
-
-        private byte[] buffer = new byte[8096];
+        private readonly Logger logger = NLog.LogManager.GetCurrentClassLogger();
+        private readonly byte[] buffer = new byte[8096];
+        
         private int bufferPos = 0;
-
         private System.Timers.Timer heartbeatTimer;
 
         public AsyncTcpClient()
@@ -176,7 +175,6 @@ namespace Tyranny.Networking
                     PacketWriter noop = new PacketWriter(TyrannyOpcode.NoOp);
                     noop.Write((byte)0);
                     Send(noop);
-                    //TcpClient.GetStream().Write(new byte[] { 0 }, 0, 1);
                 }
                 catch (Exception exception)
                 {

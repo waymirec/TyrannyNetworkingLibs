@@ -11,15 +11,16 @@ namespace Tyranny.Networking
         AuthProofAckAck=5,
         AuthComplete=6,
 
-        GameIdent=20,
+        GameIdent=10,
+        GameReady=11,
         Ping=21,
         Pong=22,
 
         Hello=50,
 
         EnterWorld=100,
-        Spawn=101,
-        Despawn=102,
+        SpawnGo=101,
+        DestroyGo=102,
         Move=103
     }
 }
