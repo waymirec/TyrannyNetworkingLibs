@@ -6,7 +6,7 @@ namespace Application
 {
     public class PasswordGenerator
     {
-        static void Main(string[] args)
+        static void Main1(string[] args)
         {
             var sha256 = SHA256Managed.Create();
             var password = "password";

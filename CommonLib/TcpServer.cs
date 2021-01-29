@@ -10,7 +10,7 @@ namespace Tyranny.Networking
 {
     public class TcpServer
     {
-        public event EventHandler<SocketEventArgs> OnClientConnected;
+        public event EventHandler<TcpSocketEventArgs> OnClientConnected;
 
         public string LocalAddress { get; private set; }
         public int Port { get; private set; }
@@ -48,7 +48,7 @@ namespace Tyranny.Networking
                     System.Net.Sockets.TcpClient client = listener.AcceptTcpClient();
                     AsyncTcpClient asyncTcpClient = new AsyncTcpClient(client);
                     clients[asyncTcpClient.Id] = asyncTcpClient;
-                    OnClientConnected?.Invoke(this, new SocketEventArgs(asyncTcpClient));
+                    OnClientConnected?.Invoke(this, new TcpSocketEventArgs(asyncTcpClient));
                 }
             });
         }

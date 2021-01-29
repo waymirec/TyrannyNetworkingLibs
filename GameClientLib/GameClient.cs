@@ -65,7 +65,7 @@ namespace Tyranny.GameClient
             tcpClient.Send(packetOut);
         }
 
-        public void OnConnected(object source, SocketEventArgs args)
+        public void OnConnected(object source, TcpSocketEventArgs args)
         {
             PacketWriter ident = new PacketWriter(TyrannyOpcode.GameIdent);
             ident.Write(Username);
@@ -76,17 +76,17 @@ namespace Tyranny.GameClient
             handler.OnLoggedIn();
         }
 
-        public void OnConnectFailed(object source, SocketEventArgs args)
+        public void OnConnectFailed(object source, TcpSocketEventArgs args)
         {
             logger.Error($"Failed to connect to {Host}:{Port}");
         }
 
-        public void OnDisconnected(object source, SocketEventArgs args)
+        public void OnDisconnected(object source, TcpSocketEventArgs args)
         {
             logger.Info($"Disconnected from {Host}:{Port}");
         }
 
-        public void OnDataReceived(object source, PacketEventArgs args)
+        public void OnDataReceived(object source, TcpPacketEventArgs args)
         {
             TyrannyOpcode opcode = args.Packet.Opcode;
             Handler handler;

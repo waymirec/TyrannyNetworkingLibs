@@ -13,10 +13,10 @@ namespace Tyranny.Networking
         public string Host { get; private set; }
         public int Port { get; private set; }
 
-        public event EventHandler<SocketEventArgs> OnConnected;
-        public event EventHandler<SocketEventArgs> OnConnectFailed;
-        public event EventHandler<SocketEventArgs> OnDisconnected;
-        public event EventHandler<PacketEventArgs> OnDataReceived;
+        public event EventHandler<TcpSocketEventArgs> OnConnected;
+        public event EventHandler<TcpSocketEventArgs> OnConnectFailed;
+        public event EventHandler<TcpSocketEventArgs> OnDisconnected;
+        public event EventHandler<TcpPacketEventArgs> OnDataReceived;
 
         public bool Connected => TcpClient.Connected;
         public System.Net.Sockets.TcpClient TcpClient { get; private set; }
@@ -55,13 +55,11 @@ namespace Tyranny.Networking
             logger.Debug($"Connecting to {Host}:{Port}");
             await TcpClient.ConnectAsync(host, port);
 
-            SocketEventArgs args = new SocketEventArgs();
-            args.TcpClient = this;
-
+            var args = new TcpSocketEventArgs {TcpClient = this};
             if(TcpClient.Connected)
             {
                 logger.Debug($"Connected to {Host}:{Port}");
-                ((NetworkStream)TcpClient.GetStream()).ReadTimeout = 1000;
+                TcpClient.GetStream().ReadTimeout = 1000;
                 OnConnected?.Invoke(this, args);
             }
             else
@@ -91,16 +89,15 @@ namespace Tyranny.Networking
                 {
                     logger.Error($"Error writing to socket to {Host}:{Port}");
                     TcpClient.Close();
-                    OnDisconnected?.Invoke(this, new SocketEventArgs(this));
+                    OnDisconnected?.Invoke(this, new TcpSocketEventArgs(this));
                 }
             }
         }
 
-        public async void ReadAsync()
+        async void ReadAsync()
         {
             while (TcpClient.Connected)
             {
-                NetworkStream stream = TcpClient.GetStream();
                 try
                 {
                     int read = await TcpClient.GetStream().ReadAsync(buffer, bufferPos, buffer.Length - bufferPos);
@@ -127,15 +124,13 @@ namespace Tyranny.Networking
                         byte[] data = new byte[len];
                         Array.Copy(buffer, 4, data, 0, len);
 
-                        PacketEventArgs args = new PacketEventArgs();
-                        args.TcpClient = this;
-                        args.Packet = new PacketReader(data);
-                        if (args.Packet.Opcode != TyrannyOpcode.NoOp)
+                        var packet = new PacketReader(data);
+                        if (packet.Opcode != TyrannyOpcode.NoOp)
                         {
                             if (OnDataReceived == null)
-                                logger.Warn($"No handler found for opcode: {args.Packet.Opcode}");
-
-                            OnDataReceived?.Invoke(this, args);
+                                logger.Warn($"No handler found for opcode: {packet.Opcode}");
+                         
+                            OnDataReceived?.Invoke(this, new TcpPacketEventArgs{TcpClient = this, Packet = packet});
                         }
 
                         int extra = bufferPos - (len + 4);
@@ -150,7 +145,7 @@ namespace Tyranny.Networking
                 }
             }
             logger.Debug($"Client {Id} disconnected");
-            OnDisconnected?.Invoke(this, new SocketEventArgs(this));
+            OnDisconnected?.Invoke(this, new TcpSocketEventArgs(this));
         }
 
         private void Initialize()
@@ -184,32 +179,32 @@ namespace Tyranny.Networking
         }
     }
 
-    public class PacketEventArgs : EventArgs
+    public class TcpPacketEventArgs : EventArgs
     {
         public AsyncTcpClient TcpClient { get; set; }
         public PacketReader Packet { get; set; }
 
-        public PacketEventArgs()
+        public TcpPacketEventArgs()
         {
 
         }
 
-        public PacketEventArgs(AsyncTcpClient tcpClient)
+        public TcpPacketEventArgs(AsyncTcpClient tcpClient)
         {
             TcpClient = tcpClient;
         }
     }
 
-    public class SocketEventArgs : EventArgs
+    public class TcpSocketEventArgs : EventArgs
     {
         public AsyncTcpClient TcpClient { get; set; }
 
-        public SocketEventArgs()
+        public TcpSocketEventArgs()
         {
 
         }
 
-        public SocketEventArgs(AsyncTcpClient tcpClient)
+        public TcpSocketEventArgs(AsyncTcpClient tcpClient)
         {
             TcpClient = tcpClient;
         }

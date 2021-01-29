@@ -19,8 +19,8 @@ namespace Tyranny.Networking
         Hello=50,
 
         EnterWorld=100,
-        SpawnGo=101,
-        DestroyGo=102,
-        Move=103
+        SpawnWorldEntity=101,
+        DestroyWorldEntity=102,
+        MoveWorldEntity=103
     }
 }

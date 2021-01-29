@@ -82,9 +82,9 @@ namespace Tyranny.Networking
 
         public override string ReadString()
         {
-            int len = this.ReadUInt16();
-            byte[] bytes = this.ReadBytes(len);
-            return BitConverter.ToString(bytes);
+            int len = ReadUInt16();
+            byte[] bytes = ReadBytes(len);
+            return Encoding.UTF8.GetString(bytes);
         }
     }
 }

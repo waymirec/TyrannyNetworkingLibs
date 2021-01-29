@@ -105,5 +105,10 @@ namespace Tyranny.Networking
             packet = new PacketReader(data);
             return true;
         }
+        
+        public void Close()
+        {
+            client.Close();
+        }
     }
 }

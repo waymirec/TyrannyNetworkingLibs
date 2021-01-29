@@ -52,6 +52,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AsyncTcpClient.cs" />
+    <Compile Include="AsyncUdpClient.cs" />
     <Compile Include="AuthPacketHandler.cs" />
     <Compile Include="GuidExtensionMethods.cs" />
     <Compile Include="MemoryStreamExtensionMethods.cs" />
