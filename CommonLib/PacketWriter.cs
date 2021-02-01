@@ -2,20 +2,21 @@
 using System;
 using System.IO;
 using System.Text;
+using CommonLib;
 
 namespace Tyranny.Networking
 {
-    public class PacketWriter : BinaryWriter
+    public class PacketWriter<TOpcode> : BinaryWriter where TOpcode : Enum
     {
-        public readonly TyrannyOpcode Opcode;
+        public readonly TOpcode Opcode;
 
         private Logger logger = NLog.LogManager.GetCurrentClassLogger();
 
-        public PacketWriter(TyrannyOpcode opcode) : base(new MemoryStream())
+        public PacketWriter(TOpcode opcode) : base(new MemoryStream())
         {
-            this.Opcode = opcode;
-            this.Write(0);
-            this.Write((short)opcode);
+            Opcode = opcode;
+            Write(0);
+            Write(Convert.ToInt16(opcode));
         }
 
         public override void Write(UInt64 value)

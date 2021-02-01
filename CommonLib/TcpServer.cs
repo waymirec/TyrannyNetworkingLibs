@@ -8,16 +8,16 @@ using System.Threading.Tasks;
 
 namespace Tyranny.Networking
 {
-    public class TcpServer
+    public class TcpServer<TOpcode> where TOpcode : Enum
     {
-        public event EventHandler<TcpSocketEventArgs> OnClientConnected;
+        public event EventHandler<TcpSocketEventArgs<TOpcode>> OnClientConnected;
 
         public string LocalAddress { get; private set; }
         public int Port { get; private set; }
 
         public bool Running { get; private set; }
 
-        protected Dictionary<Guid, AsyncTcpClient> clients = new Dictionary<Guid, AsyncTcpClient>();
+        protected Dictionary<Guid, AsyncTcpClient<TOpcode>> clients = new Dictionary<Guid, AsyncTcpClient<TOpcode>>();
 
         private Logger logger = LogManager.GetCurrentClassLogger();
         private TcpListener listener;
@@ -45,10 +45,10 @@ namespace Tyranny.Networking
                         continue;
                     }
 
-                    System.Net.Sockets.TcpClient client = listener.AcceptTcpClient();
-                    AsyncTcpClient asyncTcpClient = new AsyncTcpClient(client);
+                    TcpClient client = listener.AcceptTcpClient();
+                    AsyncTcpClient<TOpcode> asyncTcpClient = new AsyncTcpClient<TOpcode>(client);
                     clients[asyncTcpClient.Id] = asyncTcpClient;
-                    OnClientConnected?.Invoke(this, new TcpSocketEventArgs(asyncTcpClient));
+                    OnClientConnected?.Invoke(this, new TcpSocketEventArgs<TOpcode>(asyncTcpClient));
                 }
             });
         }

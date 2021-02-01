@@ -1,12 +1,13 @@
 ﻿using NLog;
 using System;
 using System.Collections.Generic;
+using CommonLib;
 using Tyranny.Networking;
 using Tyranny.Networking.Events;
 
 namespace Tyranny.GameClient
 {
-    public class GameClient : IPacketHandler
+    public class GameClient 
     {
         public delegate void Handler(PacketReader packetIn, AsyncTcpClient tcpClient);
 
@@ -21,11 +22,11 @@ namespace Tyranny.GameClient
         private static Logger logger = LogManager.GetCurrentClassLogger();
 
         private AsyncTcpClient tcpClient;
-        private IGamePacketHandler handler;
+        private GamePacketHandler handler;
 
         private Dictionary<TyrannyOpcode, Handler> packetHandlers;
 
-        public GameClient(String host, int port, IGamePacketHandler handler)
+        public GameClient(String host, int port, GamePacketHandler handler)
         {
             Host = host;
             Port = port;
@@ -38,7 +39,7 @@ namespace Tyranny.GameClient
             tcpClient.OnDisconnected += OnDisconnected;
             tcpClient.OnDataReceived += OnDataReceived;
 
-            packetHandlers = PacketHandler.Load<Handler>(this);
+            packetHandlers = new GamePacketHandlerLoader().Load<Handler>(this);
         }
 
         void OnDestroy()
@@ -107,7 +108,7 @@ namespace Tyranny.GameClient
             }
         }
 
-        [PacketHandler(TyrannyOpcode.Ping)]
+        [GamePacketHandler(TyrannyOpcode.Ping)]
         public void HandlePing(PacketReader packetIn, AsyncTcpClient client)
         {
             int count = packetIn.ReadInt32();
@@ -118,14 +119,14 @@ namespace Tyranny.GameClient
             client.Send(pong);
         }
 
-        [PacketHandler(TyrannyOpcode.Pong)]
+        [GamePacketHandler(TyrannyOpcode.Pong)]
         public void HandlePong(PacketReader packetIn, AsyncTcpClient client)
         {
             int count = packetIn.ReadInt32();
             logger.Debug($"Pong({count}");
         }
 
-        [PacketHandler(TyrannyOpcode.EnterWorld)]
+        [GamePacketHandler(TyrannyOpcode.EnterWorld)]
         public void HandleEnterWorld(PacketReader packetIn, AsyncTcpClient client)
         {
             Guid guid = new Guid(packetIn.ReadBytes(16));
@@ -138,12 +139,5 @@ namespace Tyranny.GameClient
 
             handler.EnterWorld(guid, x, y, z);
         }
-    }
-
-    public interface IGamePacketHandler
-    {
-        void OnLoggedIn();
-        void EnterWorld(Guid guid, float x, float y, float z);
-        void OnMove(MovementEventArgs args);
     }
 }

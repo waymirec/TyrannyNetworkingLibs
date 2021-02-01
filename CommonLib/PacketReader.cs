@@ -2,12 +2,13 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using CommonLib;
 
 namespace Tyranny.Networking
 {
-    public class PacketReader : BinaryReader
+    public class PacketReader<TOpcode> : BinaryReader where TOpcode : Enum
     {
-        public readonly TyrannyOpcode Opcode;
+        public readonly TOpcode Opcode;
 
         public PacketReader(byte[] bytes) : this(new MemoryStream(bytes))
         {
@@ -20,7 +21,7 @@ namespace Tyranny.Networking
             ms.Read(opcodeBytes, 0, 2);
             if (BitConverter.IsLittleEndian) Array.Reverse(opcodeBytes);
             int opcodeValue = BitConverter.ToInt16(opcodeBytes, 0);
-            this.Opcode = (TyrannyOpcode)opcodeValue;
+            Opcode = (TOpcode)Enum.ToObject(typeof(TOpcode), opcodeValue);
             ms.Seek(2, SeekOrigin.Begin);
         }
 

@@ -5,14 +5,14 @@ using NLog;
 
 namespace Tyranny.Networking
 {
-    public class AsyncUdpClient
+    public class AsyncUdpClient<TOpcode> where TOpcode : Enum
     {
         public Guid Id { get; set; }
         public int Port { get; private set; }
 
-        public event EventHandler<AsyncUdpSocketEventArgs> OnConnected;
-        public event EventHandler<AsyncUdpSocketEventArgs> OnDisconnected;
-        public event EventHandler<AsyncUdpPacketEventArgs> OnDataReceived;
+        public event EventHandler<AsyncUdpSocketEventArgs<TOpcode>> OnConnected;
+        public event EventHandler<AsyncUdpSocketEventArgs<TOpcode>> OnDisconnected;
+        public event EventHandler<AsyncUdpPacketEventArgs<TOpcode>> OnDataReceived;
         public UdpClient UdpClient { get; private set; }
 
         private readonly Logger logger = NLog.LogManager.GetCurrentClassLogger();
@@ -29,7 +29,7 @@ namespace Tyranny.Networking
         {
             running = true;
             ReceiveAsync();
-            OnConnected?.Invoke(this, new AsyncUdpSocketEventArgs {Client = this});
+            OnConnected?.Invoke(this, new AsyncUdpSocketEventArgs<TOpcode> {Client = this});
         }
 
         public void Stop()
@@ -42,8 +42,13 @@ namespace Tyranny.Networking
         {
             UdpClient.JoinMulticastGroup(IPAddress.Parse(host));
         }
+
+        public void LeaveMulticastGroup(string host)
+        {
+            UdpClient.DropMulticastGroup(IPAddress.Parse(host));
+        }
         
-        public async void Send(PacketWriter packet, string host)
+        public async void Send(PacketWriter<TOpcode> packet, string host)
         {
             var data = packet.ToBytes();
             var bytesSent = await UdpClient.SendAsync(data, data.Length, host, Port);
@@ -60,13 +65,12 @@ namespace Tyranny.Networking
                 try
                 {
                     var result = await UdpClient.ReceiveAsync();
-                    var packet = new PacketReader(result.Buffer);
-                    if (packet.Opcode == TyrannyOpcode.NoOp) return;
+                    var packet = new PacketReader<TOpcode>(result.Buffer);
                     
                     if (OnDataReceived == null)
                         logger.Warn($"No handler found for opcode: {packet.Opcode}");
 
-                    OnDataReceived?.Invoke(this, new AsyncUdpPacketEventArgs
+                    OnDataReceived?.Invoke(this, new AsyncUdpPacketEventArgs<TOpcode>
                     {
                         Client = this, 
                         Packet = packet,
@@ -80,19 +84,19 @@ namespace Tyranny.Networking
                 }
             }
             logger.Debug($"Client {Id} disconnected");
-            OnDisconnected?.Invoke(this, new AsyncUdpSocketEventArgs{Client = this});
+            OnDisconnected?.Invoke(this, new AsyncUdpSocketEventArgs<TOpcode>{Client = this});
         }
     }
     
-    public class AsyncUdpPacketEventArgs : EventArgs
+    public class AsyncUdpPacketEventArgs<TOpcode> : EventArgs where TOpcode : Enum
     {
-        public AsyncUdpClient Client { get; set; }
-        public PacketReader Packet { get; set; }
+        public AsyncUdpClient<TOpcode> Client { get; set; }
+        public PacketReader<TOpcode> Packet { get; set; }
         public IPEndPoint Sender { get; set; }
     }
     
-    public class AsyncUdpSocketEventArgs : EventArgs
+    public class AsyncUdpSocketEventArgs<TOpcode> : EventArgs where TOpcode : Enum
     {
-        public AsyncUdpClient Client { get; set; }
+        public AsyncUdpClient<TOpcode> Client { get; set; }
     }
 }

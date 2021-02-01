@@ -1,50 +1,39 @@
 ﻿using NLog;
 using System;
 using System.IO;
-using System.Net.Sockets;
 using System.Threading;
-using System.Timers;
 
 namespace Tyranny.Networking
 {
-    public class AsyncTcpClient
+    public class AsyncTcpClient<TOpcode> where TOpcode : Enum
     {
         public Guid Id { get; set; }
         public string Host { get; private set; }
         public int Port { get; private set; }
 
-        public event EventHandler<TcpSocketEventArgs> OnConnected;
-        public event EventHandler<TcpSocketEventArgs> OnConnectFailed;
-        public event EventHandler<TcpSocketEventArgs> OnDisconnected;
-        public event EventHandler<TcpPacketEventArgs> OnDataReceived;
+        public event EventHandler<TcpSocketEventArgs<TOpcode>> OnConnected;
+        public event EventHandler<TcpSocketEventArgs<TOpcode>> OnConnectFailed;
+        public event EventHandler<TcpSocketEventArgs<TOpcode>> OnDisconnected;
+        public event EventHandler<TcpPacketEventArgs<TOpcode>> OnDataReceived;
 
         public bool Connected => TcpClient.Connected;
         public System.Net.Sockets.TcpClient TcpClient { get; private set; }
 
-        private readonly Logger logger = NLog.LogManager.GetCurrentClassLogger();
+        private readonly Logger logger = LogManager.GetCurrentClassLogger();
         private readonly byte[] buffer = new byte[8096];
         
         private int bufferPos = 0;
-        private System.Timers.Timer heartbeatTimer;
 
         public AsyncTcpClient()
         {
             Id = Guid.NewGuid();
             TcpClient = new System.Net.Sockets.TcpClient();
-            Initialize();
         }
 
         public AsyncTcpClient(System.Net.Sockets.TcpClient tcpClient)
         {
             Id = Guid.NewGuid();
             TcpClient = tcpClient;
-            Initialize();
-
-        }
-
-        ~AsyncTcpClient()
-        {
-            StopHeartbeat();
         }
 
         public async void Connect(String host, int port)
@@ -55,7 +44,7 @@ namespace Tyranny.Networking
             logger.Debug($"Connecting to {Host}:{Port}");
             await TcpClient.ConnectAsync(host, port);
 
-            var args = new TcpSocketEventArgs {TcpClient = this};
+            var args = new TcpSocketEventArgs<TOpcode> {TcpClient = this};
             if(TcpClient.Connected)
             {
                 logger.Debug($"Connected to {Host}:{Port}");
@@ -76,7 +65,7 @@ namespace Tyranny.Networking
             TcpClient.Close();
         }
 
-        public async void Send(PacketWriter packet)
+        public async void Send(PacketWriter<TOpcode> packet)
         {
             if (TcpClient.Connected)
             {
@@ -89,7 +78,7 @@ namespace Tyranny.Networking
                 {
                     logger.Error($"Error writing to socket to {Host}:{Port}");
                     TcpClient.Close();
-                    OnDisconnected?.Invoke(this, new TcpSocketEventArgs(this));
+                    OnDisconnected?.Invoke(this, new TcpSocketEventArgs<TOpcode>(this));
                 }
             }
         }
@@ -124,14 +113,11 @@ namespace Tyranny.Networking
                         byte[] data = new byte[len];
                         Array.Copy(buffer, 4, data, 0, len);
 
-                        var packet = new PacketReader(data);
-                        if (packet.Opcode != TyrannyOpcode.NoOp)
-                        {
-                            if (OnDataReceived == null)
-                                logger.Warn($"No handler found for opcode: {packet.Opcode}");
+                        var packet = new PacketReader<TOpcode>(data);
+                        if (OnDataReceived == null)
+                            logger.Warn($"No handler found for opcode: {packet.Opcode}");
                          
-                            OnDataReceived?.Invoke(this, new TcpPacketEventArgs{TcpClient = this, Packet = packet});
-                        }
+                        OnDataReceived?.Invoke(this, new TcpPacketEventArgs<TOpcode>{TcpClient = this, Packet = packet});
 
                         int extra = bufferPos - (len + 4);
                         Array.Copy(buffer, len + 4, buffer, 0, extra);
@@ -145,66 +131,36 @@ namespace Tyranny.Networking
                 }
             }
             logger.Debug($"Client {Id} disconnected");
-            OnDisconnected?.Invoke(this, new TcpSocketEventArgs(this));
-        }
-
-        private void Initialize()
-        {
-            heartbeatTimer = new System.Timers.Timer(5000);
-            heartbeatTimer.Elapsed += OnHeartbeatTimer;
-            heartbeatTimer.Enabled = true;
-        }
-
-        private void StopHeartbeat()
-        {
-            heartbeatTimer.Elapsed -= OnHeartbeatTimer;
-            heartbeatTimer.Enabled = false;
-        }
-
-        private void OnHeartbeatTimer(object source, ElapsedEventArgs e)
-        {
-            if (TcpClient.Connected)
-            {
-                try
-                {
-                    PacketWriter noop = new PacketWriter(TyrannyOpcode.NoOp);
-                    noop.Write((byte)0);
-                    Send(noop);
-                }
-                catch (Exception exception)
-                {
-                    logger.Debug(exception, "Exception sending heartbeat");
-                }
-            }
+            OnDisconnected?.Invoke(this, new TcpSocketEventArgs<TOpcode>(this));
         }
     }
 
-    public class TcpPacketEventArgs : EventArgs
+    public class TcpPacketEventArgs<TOpcode> : EventArgs where TOpcode : Enum
     {
-        public AsyncTcpClient TcpClient { get; set; }
-        public PacketReader Packet { get; set; }
+        public AsyncTcpClient<TOpcode> TcpClient { get; set; }
+        public PacketReader<TOpcode> Packet { get; set; }
 
         public TcpPacketEventArgs()
         {
 
         }
 
-        public TcpPacketEventArgs(AsyncTcpClient tcpClient)
+        public TcpPacketEventArgs(AsyncTcpClient<TOpcode> tcpClient)
         {
             TcpClient = tcpClient;
         }
     }
 
-    public class TcpSocketEventArgs : EventArgs
+    public class TcpSocketEventArgs<TOpcode> : EventArgs where TOpcode : Enum
     {
-        public AsyncTcpClient TcpClient { get; set; }
+        public AsyncTcpClient<TOpcode> TcpClient { get; set; }
 
         public TcpSocketEventArgs()
         {
 
         }
 
-        public TcpSocketEventArgs(AsyncTcpClient tcpClient)
+        public TcpSocketEventArgs(AsyncTcpClient<TOpcode> tcpClient)
         {
             TcpClient = tcpClient;
         }

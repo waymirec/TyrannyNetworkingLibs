@@ -2,6 +2,7 @@
 using System;
 using System.Security.Cryptography;
 using System.Text;
+using CommonLib;
 using Tyranny.Networking;
 
 namespace Application
@@ -12,7 +13,7 @@ namespace Application
 
         //TcpServer worldServer;
 
-        private AsyncUdpClient client;
+        private AsyncUdpClient<Enum> client;
         
         static void Main(string[] args)
         {
@@ -38,7 +39,7 @@ namespace Application
 
         public void Start()
         {
-            client = new AsyncUdpClient(54322);
+            client = new AsyncUdpClient<Enum>(54322);
             client.JoinMulticastGroup("239.0.1.1");
             client.OnDataReceived += OnDataReceived;
             client.Start();
@@ -56,7 +57,7 @@ namespace Application
             //worldServer.Stop();
         }
 
-        public void OnDataReceived(object source, AsyncUdpPacketEventArgs args)
+        public void OnDataReceived(object source, AsyncUdpPacketEventArgs<Enum> args)
         {
             Console.WriteLine(args.Packet.Opcode + " => " + args.Packet.ReadString());
         }

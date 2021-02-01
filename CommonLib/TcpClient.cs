@@ -5,7 +5,7 @@ using System.Net.Sockets;
 
 namespace Tyranny.Networking
 {
-    public class TcpClient
+    public class TcpClient<TOpcode> where TOpcode : Enum
     {
         private readonly Guid id = Guid.NewGuid();
         public Guid Id => id;
@@ -57,7 +57,7 @@ namespace Tyranny.Networking
             }
         }
 
-        public void Send(PacketWriter packet)
+        public void Send(PacketWriter<TOpcode> packet)
         {
             if (client.Connected)
             {
@@ -74,7 +74,7 @@ namespace Tyranny.Networking
             }
         }
 
-        public bool Read(out PacketReader packet)
+        public bool Read(out PacketReader<TOpcode> packet)
         {
             int read = client.GetStream().Read(buffer, bufferPos, buffer.Length - bufferPos);
             if (read == 0)
@@ -102,7 +102,7 @@ namespace Tyranny.Networking
             Array.Copy(buffer, len + 4, buffer, 0, extra);
             bufferPos = extra;
 
-            packet = new PacketReader(data);
+            packet = new PacketReader<TOpcode>(data);
             return true;
         }
         
